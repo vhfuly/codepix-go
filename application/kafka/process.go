@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/vhfuly/codepix-go/application/factory"
 	appmodel "github.com/vhfuly/codepix-go/application/model"
@@ -28,8 +29,8 @@ func NewKafkaProcessor(database *gorm.DB, producer *ckafka.Producer, deliveryCha
 
 func (k *KafkaProcessor) Consume() {
 	configMap := &ckafka.ConfigMap{
-		"bootstrap.servers": "kafka:9092",
-		"group.id":          "comsumergroup",
+		"bootstrap.servers": os.Getenv("kafkaBootstrapServers"),
+		"group.id":          os.Getenv("kafkaConsumerGroupId"),
 		"auto.offset.reset": "earliest",
 	}
 	c, err := ckafka.NewConsumer(configMap)
@@ -38,14 +39,14 @@ func (k *KafkaProcessor) Consume() {
 		panic(err)
 	}
 
-	topics := []string{"test"}
+	topics := []string{os.Getenv("kafkaTransactionTopic"), os.Getenv("kafkaTransactionConfirmationTopic")}
 	c.SubscribeTopics(topics, nil)
 
 	fmt.Println("kafka consumer has been started")
-
 	for {
 		msg, err := c.ReadMessage(-1)
 		if err == nil {
+			fmt.Println(string(msg.Value))
 			k.processMessage(msg)
 		}
 	}
